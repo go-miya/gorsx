@@ -1,4 +1,4 @@
-package demo
+package example
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-//go:generate gors -service BindingRender
+//go:generate cmd -service BindingRender -impl impl
 
 // BindingRender
 // @GORS @Path(/api/BindingRender)

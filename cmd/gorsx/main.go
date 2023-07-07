@@ -27,7 +27,7 @@ var (
 // Usage is a replacement usage function for the flags package.
 func Usage() {
 	fmt.Fprintf(os.Stderr, "Usage of gors:\n")
-	fmt.Fprintf(os.Stderr, "\tgors -service S\n")
+	fmt.Fprintf(os.Stderr, "\tgorsx -service S\n")
 	fmt.Fprintf(os.Stderr, "Flags:\n")
 	flag.PrintDefaults()
 }
