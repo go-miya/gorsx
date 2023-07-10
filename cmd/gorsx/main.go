@@ -29,6 +29,8 @@ func Usage() {
 	fmt.Fprintf(os.Stderr, "Usage of gors:\n")
 	fmt.Fprintf(os.Stderr, "\tgorsx -service S\n")
 	fmt.Fprintf(os.Stderr, "Flags:\n")
+	fmt.Fprintf(os.Stderr, "\tgorsx -impl S\n")
+	fmt.Fprintf(os.Stderr, "Flags:\n")
 	flag.PrintDefaults()
 }
 
@@ -96,19 +98,17 @@ func main() {
 
 			// params
 			g.checkParams(rpcType, methodName)
-			// param1
-			g.checkParam1MustBeContext(rpcType, methodName)
 			// param2
 			param2 := g.checkAndGetParam2(rpcType, methodName)
 			routerInfo.Param2 = param2
 
 			// results
 			g.checkResults(rpcType, methodName)
-			// result2
-			g.checkResult2MustBeError(rpcType, methodName)
 			// result1
 			result1 := g.checkAndGetResult1(rpcType, methodName)
 			routerInfo.Result1 = result1
+
+			routerInfo.Params, routerInfo.Results = g.getParamsAndResults(rpcType)
 
 			g.routerInfos = append(g.routerInfos, routerInfo)
 		}
@@ -129,6 +129,8 @@ func main() {
 			log.Fatal(err)
 		}
 		g.implDeclImports, g.implRemainDecls, g.implDeclFuncs = pkg.InspectAstFile(astFile)
+		g.implFile = astFile
+		g.implComments = astFile.Comments
 		content = g.contentImplAppend()
 	}
 

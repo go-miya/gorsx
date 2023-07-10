@@ -2,15 +2,17 @@ package example
 
 import (
 	"context"
+	"io"
 	"mime/multipart"
 	"time"
 )
 
-//go:generate cmd -service BindingRender -impl impl
+//go:generate gorsx -service BindingRender -impl impl
 
 // BindingRender
 // @GORS @Path(/api/BindingRender)
 type BindingRender interface {
+	GetReaderReader2(context.Context, io.Reader) (io.Reader, error)
 	// UriBindingIndentedJSONRender
 	// @GORS @GET @Path(/UriBindingIndentedJSONRender/:id) @UriBinding @IndentedJSONRender
 	UriBindingIndentedJSONRender(context.Context, *UriBindingReq) (*IndentedJSONRenderResp, error)
@@ -47,6 +49,9 @@ type BindingRender interface {
 	// TOMLBindingTOMLRender2
 	// @GORS @PUT @Path(/TOMLBindingTOMLRender2/:id) @UriBinding @QueryBinding @HeaderBinding @TOMLBinding @TOMLRender
 	TOMLBindingTOMLRender2(context.Context, *TOMLBindingReq) (*TOMLRenderResp, error)
+	TOMLBindingTOMLRender3(context.Context, *TOMLBindingReq) (*TOMLRenderResp, error)
+	GetBytesBytes(context.Context, []byte) ([]byte, error)
+	GetReaderReader(context.Context, io.Reader) (io.Reader, error)
 }
 
 type UriBindingReq struct {

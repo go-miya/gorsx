@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"go/ast"
 	"go/token"
 	"log"
 	"path"
@@ -88,12 +89,11 @@ type Result struct {
 }
 
 type RouterInfo struct {
-	Method string
-	Path   string
-
 	RpcMethodName string
 	Param2        *Param
+	Params        *ast.FieldList
 	Result1       *Result
+	Results       *ast.FieldList
 }
 
 func FindPath(s string) (string, bool) {
