@@ -115,7 +115,7 @@ func main() {
 	}
 
 	outDir, err := detectOutputDir(pack.GoFiles)
-	implOutputPath := filepath.Join(outDir, *ImplPath, fmt.Sprintf("%s_controller.go", strings.ToLower(*serviceName)))
+	implOutputPath := filepath.Join(outDir, *ImplPath, fmt.Sprintf("%s.go", strings.ToLower(*serviceName)))
 	g.pkgImportPath = pack.PkgPath
 	_, g.pkgImpl = filepath.Split(*ImplPath)
 	g.pkgImpl = fmt.Sprintf("package %s", g.pkgImpl)
