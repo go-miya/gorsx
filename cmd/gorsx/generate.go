@@ -459,7 +459,7 @@ func (g *generate) buildFuncDecl(importPath, typeName string, info *pkg.RouterIn
 		gp := paramObj.GoImportPath.Ident(paramObj.Name)
 		gp.GoImport.Enable = true
 		g.imports[gp.GoImport.ImportPath] = gp.GoImport
-		param2.Type = &ast.SelectorExpr{X: ast.NewIdent(gp.GoImport.PackageName), Sel: ast.NewIdent(gp.GoName)}
+		param2.Type = &ast.StarExpr{X: &ast.SelectorExpr{X: ast.NewIdent(gp.GoImport.PackageName), Sel: ast.NewIdent(gp.GoName)}}
 	}
 
 	// results
@@ -473,7 +473,7 @@ func (g *generate) buildFuncDecl(importPath, typeName string, info *pkg.RouterIn
 		gp := resultObj.GoImportPath.Ident(resultObj.Name)
 		gp.GoImport.Enable = true
 		g.imports[gp.GoImport.ImportPath] = gp.GoImport
-		result1.Type = &ast.SelectorExpr{X: ast.NewIdent(gp.GoImport.PackageName), Sel: ast.NewIdent(gp.GoName)}
+		result1.Type = &ast.StarExpr{X: &ast.SelectorExpr{X: ast.NewIdent(gp.GoImport.PackageName), Sel: ast.NewIdent(gp.GoName)}}
 	}
 	decl.Type = &ast.FuncType{
 		Params:  &ast.FieldList{List: params},

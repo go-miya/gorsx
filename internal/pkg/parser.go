@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"bytes"
-	"fmt"
 	"go/ast"
 	"go/format"
 	"go/parser"
@@ -16,7 +15,6 @@ func ParserFile(file string) (*ast.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(111, fset.Position(token.Pos(129)), fset.PositionFor(token.Pos(129), false))
 	return f, nil
 }
 

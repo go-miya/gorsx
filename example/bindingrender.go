@@ -52,6 +52,7 @@ type BindingRender interface {
 	TOMLBindingTOMLRender3(context.Context, *TOMLBindingReq) (*TOMLRenderResp, error)
 	GetBytesBytes(context.Context, []byte) ([]byte, error)
 	GetReaderReader(context.Context, io.Reader) (io.Reader, error)
+	TOMLBindingTOMLRender4(context.Context, *TOMLBindingReq) (*TOMLRenderResp, error)
 }
 
 type UriBindingReq struct {
