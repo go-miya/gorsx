@@ -9,7 +9,7 @@ import (
 	"log"
 )
 
-func ParserFile(file string) (*ast.File, error) {
+func ParserGoFile(file string) (*ast.File, error) {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, file, nil, parser.ParseComments)
 	if err != nil {

@@ -75,42 +75,32 @@ func main() {
 		pkg:              fmt.Sprintf("package %s", pack.Name),
 		imports:          imports,
 		srvName:          *serviceName,
-		routerInfos:      nil,
+		funcs:            nil,
 		usedPackageNames: make(map[string]bool),
 	}
 
 	if serviceDecl != nil && serviceSpec != nil && serviceType != nil && len(serviceMethods) > 0 {
-		// generate router by method comment
 		for _, method := range serviceMethods {
 			if slicex.IsEmpty(method.Names) {
 				continue
 			}
 			methodName := method.Names[0]
-			routerInfo := &pkg.RouterInfo{}
-			if routerInfo == nil {
-				continue
-			}
-			routerInfo.RpcMethodName = methodName.Name
-			rpcType, ok := method.Type.(*ast.FuncType)
+			funcType, ok := method.Type.(*ast.FuncType)
 			if !ok {
 				log.Fatalf("error: func %s not convert to *ast.FuncType", methodName)
 			}
 
-			// params
-			g.checkParams(rpcType, methodName)
-			// param2
-			param2 := g.checkAndGetParam2(rpcType, methodName)
-			routerInfo.Param2 = param2
+			funcInfo := pkg.NewMethodInfo(methodName.Name, funcType)
+			err := funcInfo.Check()
+			if err != nil {
+				log.Fatal(err)
+			}
 
-			// results
-			g.checkResults(rpcType, methodName)
-			// result1
-			result1 := g.checkAndGetResult1(rpcType, methodName)
-			routerInfo.Result1 = result1
+			funcInfo.Param2 = g.checkAndGetParam2(funcType, methodName)
+			funcInfo.Result1 = g.checkAndGetResult1(funcType, methodName)
+			funcInfo.Params, funcInfo.Results = g.getParamsAndResults(funcType)
 
-			routerInfo.Params, routerInfo.Results = g.getParamsAndResults(rpcType)
-
-			g.routerInfos = append(g.routerInfos, routerInfo)
+			g.funcs = append(g.funcs, funcInfo)
 		}
 	}
 
@@ -124,13 +114,11 @@ func main() {
 	if _, err := os.Stat(implOutputPath); err != nil {
 		content = g.contentImpl()
 	} else {
-		astFile, err := pkg.ParserFile(implOutputPath)
+		astFile, err := pkg.ParserGoFile(implOutputPath)
 		if err != nil {
 			log.Fatal(err)
 		}
 		g.implDeclImports, g.implRemainDecls, g.implDeclFuncs = pkg.InspectAstFile(astFile)
-		g.implFile = astFile
-		g.implComments = astFile.Comments
 		content = g.contentImplAppend()
 	}
 

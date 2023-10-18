@@ -29,12 +29,10 @@ type generate struct {
 	implDeclFuncs    []*ast.FuncDecl
 	implDeclImports  []*ast.GenDecl
 	implRemainDecls  []ast.Decl
-	implFile         *ast.File
-	implComments     []*ast.CommentGroup
 	imports          map[string]*pkg.GoImport
 	srvName          string
 	usedPackageNames map[string]bool
-	routerInfos      []*pkg.RouterInfo
+	funcs            []*pkg.FuncInfo
 }
 
 func (g *generate) checkResult2MustBeError(rpcType *ast.FuncType, methodName *ast.Ident) {
@@ -130,16 +128,6 @@ func (g *generate) getParamsAndResults(rpcType *ast.FuncType) (*ast.FieldList, *
 		result2.Names = append(result2.Names, ast.NewIdent("err"))
 	}
 	return rpcType.Params, rpcType.Results
-}
-
-func (g *generate) checkResults(rpcType *ast.FuncType, methodName *ast.Ident) {
-	if rpcType.Results == nil {
-		log.Fatalf("error: func %s results is empty", methodName)
-	}
-	if len(rpcType.Results.List) != 2 {
-		log.Fatalf("error: func %s results count is not equal 2", methodName)
-	}
-	g.checkResult2MustBeError(rpcType, methodName)
 }
 
 func (g *generate) checkAndGetParam2(rpcType *ast.FuncType, methodName *ast.Ident) *pkg.Param {
@@ -294,12 +282,12 @@ func (g *generate) printFunctionImpl() {
 	g.P(g.functionBuf, "type ", typeName, " struct {}")
 	g.P(g.functionBuf)
 	g.P(g.functionBuf)
-	for _, info := range g.routerInfos {
+	for _, info := range g.funcs {
 		g.printRouterInfoImpl(typeName, info)
 	}
 }
 
-func (g *generate) printRouterInfoImpl(typeName string, info *pkg.RouterInfo) {
+func (g *generate) printRouterInfoImpl(typeName string, info *pkg.FuncInfo) {
 	if info.Param2 == nil {
 		return
 	}
@@ -307,7 +295,7 @@ func (g *generate) printRouterInfoImpl(typeName string, info *pkg.RouterInfo) {
 		return
 	}
 
-	builds := []any{"func(provider *", typeName, ") ", info.RpcMethodName, "(c ", contextPackage.Ident("Context"), ","}
+	builds := []any{"func(provider *", typeName, ") ", info.FuncName, "(c ", contextPackage.Ident("Context"), ","}
 
 	if info.Param2.Bytes {
 		builds = append(builds, "req []byte")
@@ -322,7 +310,7 @@ func (g *generate) printRouterInfoImpl(typeName string, info *pkg.RouterInfo) {
 		}
 		builds = append(builds, "req *", paramObj.GoImportPath.Ident(objectArgs.Name))
 	} else {
-		log.Fatalf("error: func %s 2th param is invalid, must be []byte or string or *struct{}", info.RpcMethodName)
+		log.Fatalf("error: func %s 2th param is invalid, must be []byte or string or *struct{}", info.FuncName)
 	}
 
 	builds = append(builds, ") (")
@@ -340,7 +328,7 @@ func (g *generate) printRouterInfoImpl(typeName string, info *pkg.RouterInfo) {
 		}
 		builds = append(builds, "res *", resultObj.GoImportPath.Ident(objectArgs.Name))
 	} else {
-		log.Fatalf("error: func %s 2th param is invalid, must be []byte or string or *struct{}", info.RpcMethodName)
+		log.Fatalf("error: func %s 2th param is invalid, must be []byte or string or *struct{}", info.FuncName)
 	}
 
 	builds = append(builds, ", err error)", " {")
@@ -399,8 +387,8 @@ func (g *generate) appendImports() {
 
 func (g *generate) appendFuncs() {
 	typeName := g.srvName + "Controller"
-	for _, info := range g.routerInfos {
-		if g.isExistFunc(info.RpcMethodName) {
+	for _, info := range g.funcs {
+		if g.isExistFunc(info.FuncName) {
 			continue
 		}
 		g.implDeclFuncs = append(g.implDeclFuncs, g.buildFuncDecl(g.pkgImportPath, typeName, info))
@@ -432,7 +420,7 @@ func (g *generate) isExistImport(name string) bool {
 	return false
 }
 
-func (g *generate) buildFuncDecl(importPath, typeName string, info *pkg.RouterInfo) *ast.FuncDecl {
+func (g *generate) buildFuncDecl(importPath, typeName string, info *pkg.FuncInfo) *ast.FuncDecl {
 	decl := &ast.FuncDecl{
 		Recv: &ast.FieldList{
 			List: []*ast.Field{
@@ -442,7 +430,7 @@ func (g *generate) buildFuncDecl(importPath, typeName string, info *pkg.RouterIn
 				},
 			},
 		},
-		Name: ast.NewIdent(info.RpcMethodName),
+		Name: ast.NewIdent(info.FuncName),
 		Body: &ast.BlockStmt{List: []ast.Stmt{
 			&ast.ReturnStmt{},
 		}},
@@ -466,7 +454,7 @@ func (g *generate) buildFuncDecl(importPath, typeName string, info *pkg.RouterIn
 	results := info.Results.List
 	result1 := results[0]
 	if objectArgs := info.Result1.ObjectArgs; objectArgs != nil {
-		resultObj := *info.Param2.ObjectArgs
+		resultObj := *info.Result1.ObjectArgs
 		if resultObj.GoImportPath == "" {
 			resultObj.GoImportPath = pkg.GoImportPath(importPath)
 		}
