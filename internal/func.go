@@ -1,4 +1,4 @@
-package pkg
+package internal
 
 import (
 	"fmt"
@@ -67,13 +67,44 @@ func NewMethodInfo(methodName string, t *ast.FuncType) *FuncInfo {
 	}
 }
 
+func NewRPCMethodInfo(methodName string) *FuncInfo {
+	return &FuncInfo{}
+}
+
 type FuncInfo struct {
-	FuncName string
-	FuncType *ast.FuncType
-	Param2   *Param
-	Params   *ast.FieldList
-	Result1  *Result
-	Results  *ast.FieldList
+	FuncName  string
+	FuncType  *ast.FuncType
+	Param2    *Param
+	Result1   *Result
+	CQRS      *CQRSFile
+	Assembler *AssemblerCore
+}
+
+const bodyQuery = `resp, err := provider.%s.Handle(ctx, assembler.%s(req))
+	if err != nil {
+		return 
+	}
+	return assembler.%s(resp), nil`
+
+const bodyCommand = `err = provider.%s.Handle(ctx, assembler.%s(req))
+	if err != nil {
+		return 
+	}
+	return `
+
+func (f *FuncInfo) GenBody() string {
+	if f.CQRS == nil {
+		return "return"
+	}
+	cqrsCall := f.CQRS.Endpoint
+	tmpl := bodyQuery
+	if f.CQRS.IsQuery() {
+		cqrsCall = "queries." + cqrsCall
+		return fmt.Sprintf(tmpl, cqrsCall, f.Assembler.GetFuncNameTo(), f.Assembler.GetFuncNameFrom())
+	}
+	cqrsCall = "commands." + cqrsCall
+	tmpl = bodyCommand
+	return fmt.Sprintf(tmpl, cqrsCall, f.Assembler.GetFuncNameTo())
 }
 
 func (f *FuncInfo) Check() error {
