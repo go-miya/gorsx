@@ -30,6 +30,8 @@ func Usage() {
 	fmt.Fprintf(os.Stderr, "Flags:\n")
 	fmt.Fprintf(os.Stderr, "\tgorsx -impl S\n")
 	fmt.Fprintf(os.Stderr, "Flags:\n")
+	fmt.Fprintf(os.Stderr, "\tgorsx -assemble S\n")
+	fmt.Fprintf(os.Stderr, "Flags:\n")
 	flag.PrintDefaults()
 }
 

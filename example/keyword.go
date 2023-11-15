@@ -2,10 +2,11 @@ package example
 
 import "context"
 
-//go:generate gorsx -service Keyword -impl impl
+//go:generate gorsx -service Keyword -impl impl -assemble assembler
 
 // Keyword
 // @GORS @Path(/api)  @Path(/v1)
+// @CQRS @QueryPath(./app) @CommandPath(./app)
 type Keyword interface {
 	// BindBookCallback
 	// @GORS @POST @Path(/keyword/bind_book_callback) @JSONBinding @JSONRender
@@ -21,6 +22,7 @@ type Keyword interface {
 
 	// CreateKocChannelCache
 	// @GORS @POST @Path(/keyword/create_koc_channel_cache) @JSONBinding @JSONRender
+	// @CQRS @Command
 	CreateKocChannelCache(context.Context, *CreateKocChCacheReq) (*CreateKocChCacheResp, error)
 }
 
