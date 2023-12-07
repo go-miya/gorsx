@@ -11,12 +11,15 @@ import (
 type annotation string
 
 const (
-	CQRS        annotation = "@CQRS"
-	Query       annotation = "@Query"
-	Command     annotation = "@Command"
-	QueryPath   annotation = "@QueryPath"
-	CommandPath annotation = "@CommandPath"
-	NamePrefix  annotation = "@NamePrefix"
+	CQRS           annotation = "@CQRS"
+	Query          annotation = "@Query"
+	Command        annotation = "@Command"
+	QueryPath      annotation = "@QueryPath"
+	CommandPath    annotation = "@CommandPath"
+	QueryBusPath   annotation = "@QueryBusPath"
+	CommandBusPath annotation = "@CommandBusPath"
+	NamePrefix     annotation = "@NamePrefix"
+	AssemblerPath  annotation = "@AssemblerPath"
 )
 
 func (a annotation) String() string {
@@ -32,9 +35,12 @@ func (a annotation) PrefixOf(str string) bool {
 }
 
 type Path struct {
-	Query      string
-	Command    string
-	NamePrefix string
+	Query         string
+	Command       string
+	NamePrefix    string
+	BusQuery      string
+	BusCommand    string
+	AssemblerPath string
 }
 
 func NewPath(comments []string) *Path {
@@ -43,30 +49,47 @@ func NewPath(comments []string) *Path {
 		text := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(comment), "//"))
 		seg := strings.Split(text, " ")
 		// 注释的开始必须以 @CQRS 开头
-		if !CQRS.EqualsIgnoreCase(seg[0]) {
-			continue
-		}
-		for _, s := range seg {
-			s = strings.TrimSpace(s)
-			switch {
-			case QueryPath.PrefixOf(s):
-				v, ok := ExtractValue(s, string(QueryPath))
-				if !ok {
-					log.Fatalf("error: %s query path invalid", s)
+		if CQRS.EqualsIgnoreCase(seg[0]) {
+			for _, s := range seg {
+				s = strings.TrimSpace(s)
+				switch {
+				case QueryPath.PrefixOf(s):
+					v, ok := ExtractValue(s, string(QueryPath))
+					if !ok {
+						log.Fatalf("error: %s query path invalid", s)
+					}
+					info.Query = v
+				case CommandPath.PrefixOf(s):
+					v, ok := ExtractValue(s, string(CommandPath))
+					if !ok {
+						log.Fatalf("error: %s command path invalid", s)
+					}
+					info.Command = v
+				case NamePrefix.PrefixOf(s):
+					v, ok := ExtractValue(s, string(NamePrefix))
+					if !ok {
+						log.Fatalf("error: %s NamePrefix invalid", s)
+					}
+					info.NamePrefix = v
+				case QueryBusPath.PrefixOf(s):
+					v, ok := ExtractValue(s, string(QueryBusPath))
+					if !ok {
+						log.Fatalf("error: %s QueryBusPath invalid", s)
+					}
+					info.BusQuery = v
+				case CommandBusPath.PrefixOf(s):
+					v, ok := ExtractValue(s, string(CommandBusPath))
+					if !ok {
+						log.Fatalf("error: %s CommandBusPath invalid", s)
+					}
+					info.BusCommand = v
+				case AssemblerPath.PrefixOf(s):
+					v, ok := ExtractValue(s, string(AssemblerPath))
+					if !ok {
+						log.Fatalf("error: %s AssemblerPath invalid", s)
+					}
+					info.AssemblerPath = v
 				}
-				info.Query = v
-			case CommandPath.PrefixOf(s):
-				v, ok := ExtractValue(s, string(CommandPath))
-				if !ok {
-					log.Fatalf("error: %s command path invalid", s)
-				}
-				info.Command = v
-			case NamePrefix.PrefixOf(s):
-				v, ok := ExtractValue(s, string(NamePrefix))
-				if !ok {
-					log.Fatalf("error: %s NamePrefix invalid", s)
-				}
-				info.NamePrefix = v
 			}
 		}
 	}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/go-leo/gox/slicex"
@@ -18,9 +19,8 @@ import (
 )
 
 var (
-	serviceName   = flag.String("service", "", "service interface Name; must be set")
-	ImplPath      = flag.String("impl", "", "service implementation Path")
-	AssemblerPath = flag.String("assemble", "", "assemble path")
+	serviceName = flag.String("service", "", "service interface Name; must be set")
+	ImplPath    = flag.String("impl", "", "service implementation Path")
 )
 
 // Usage is a replacement usage function for the flags package.
@@ -30,7 +30,7 @@ func Usage() {
 	fmt.Fprintf(os.Stderr, "Flags:\n")
 	fmt.Fprintf(os.Stderr, "\tgorsx -impl S\n")
 	fmt.Fprintf(os.Stderr, "Flags:\n")
-	fmt.Fprintf(os.Stderr, "\tgorsx -assemble S\n")
+	fmt.Fprintf(os.Stderr, "\tgorsx -assembled S\n")
 	fmt.Fprintf(os.Stderr, "Flags:\n")
 	flag.PrintDefaults()
 }
@@ -79,6 +79,11 @@ func main() {
 	}
 
 	var files []*internal.CQRSFile
+	var cqrsPath *internal.Path
+	outDir, err := detectOutputDir(pack.GoFiles)
+	if err != nil {
+		log.Fatal(err)
+	}
 	if serviceDecl != nil && serviceSpec != nil && serviceType != nil && len(serviceMethods) > 0 {
 		// cqrsx
 		serviceName := serviceSpec.Name.String()
@@ -90,18 +95,9 @@ func main() {
 		for _, comment := range serviceDecl.Doc.List {
 			comments = append(comments, comment.Text)
 		}
-		cqrsPath := internal.NewPath(comments)
-		queryAbs, err := filepath.Abs(cqrsPath.Query)
-		if err != nil {
-			fmt.Printf("query path error: %s\n", err)
-			os.Exit(2)
-		}
-		commandAbs, err := filepath.Abs(cqrsPath.Command)
-		if err != nil {
-			fmt.Printf("command path error: %s\n", err)
-			os.Exit(2)
-		}
-		fmt.Println(queryAbs, queryAbs)
+		cqrsPath = internal.NewPath(comments)
+		queryAbs := filepath.Join(outDir, cqrsPath.Query)
+		commandAbs := filepath.Join(outDir, cqrsPath.Command)
 
 		// assembler
 		for _, method := range serviceMethods {
@@ -152,11 +148,11 @@ func main() {
 		}
 	}
 	// gen service implementation
-	g.Generate(pack.PkgPath, *ImplPath, *AssemblerPath, pack.GoFiles)
+	g.Generate(outDir, pack.PkgPath, *ImplPath, cqrsPath)
 	// gen cqrs
 	for _, f := range files {
 		if err := f.Gen(); err != nil {
-			log.Printf("%s.%s.%s error: %s\n", pack.PkgPath, *serviceName, f.Endpoint, err)
+			log.Printf("gen cqrs %s.%s.%s error: %s\n", pack.PkgPath, *serviceName, f.Endpoint, err)
 			continue
 		}
 		log.Printf("%s.%s.%s wrote %s\n", pack.PkgPath, *serviceName, f.Endpoint, f.AbsFilename)
@@ -242,4 +238,17 @@ func getGoImports(serviceFile *ast.File) map[string]*internal.GoImport {
 		goImports[item.ImportPath] = item
 	}
 	return goImports
+}
+
+func detectOutputDir(paths []string) (string, error) {
+	if len(paths) == 0 {
+		return "", errors.New("no files to derive output directory from")
+	}
+	dir := filepath.Dir(paths[0])
+	for _, p := range paths[1:] {
+		if dir2 := filepath.Dir(p); dir2 != dir {
+			return "", fmt.Errorf("found conflicting directories %q and %q", dir, dir2)
+		}
+	}
+	return dir, nil
 }

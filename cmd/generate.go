@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"github.com/go-miya/gorsx/internal"
 	"github.com/samber/lo"
@@ -55,15 +54,11 @@ func (l CQRSList) GetCommands() []*internal.CQRSFile {
 	})
 }
 
-func (g *Generate) Generate(pkgPath, ImplPath, assemblerPath string, goFiles []string) {
-	outDir, err := detectOutputDir(goFiles)
-	if err != nil {
-		log.Fatal(err)
-	}
+func (g *Generate) Generate(outDir, pkgPath, ImplPath string, carsPath *internal.Path) {
 	g.generateServiceImpl(outDir, pkgPath, ImplPath)
-	g.generateAssembler(outDir, pkgPath, assemblerPath)
-	g.generateBus(outDir, pkgPath, assemblerPath, true)
-	g.generateBus(outDir, pkgPath, assemblerPath, false)
+	g.generateAssembler(outDir, pkgPath, carsPath)
+	g.generateBus(outDir, pkgPath, carsPath, true)
+	g.generateBus(outDir, pkgPath, carsPath, false)
 }
 
 func (g *Generate) generateServiceImpl(outDir, pkgPath, ImplPath string) {
@@ -98,17 +93,17 @@ func (g *Generate) generateServiceImpl(outDir, pkgPath, ImplPath string) {
 	log.Printf("%s.%s wrote impl %s", pkgPath, g.SrvName, implOutputPath)
 }
 
-func (g *Generate) generateBus(outDir, pkgPath, assemblerPath string, isQuery bool) {
+func (g *Generate) generateBus(outDir, pkgPath string, cqrsPath *internal.Path, isQuery bool) {
 	if isQuery && len(g.CQRSList.GetQueries()) == 0 {
 		return
 	}
 	var content []byte
 	g.Reset()
-	tarFileSuffix := "query"
+	path := cqrsPath.BusQuery
 	if !isQuery {
-		tarFileSuffix = "commands"
+		path = cqrsPath.BusCommand
 	}
-	tarFilePath := filepath.Join(outDir, assemblerPath+fmt.Sprintf("/../bus/%s.go", tarFileSuffix))
+	tarFilePath := filepath.Join(outDir, path)
 	g.pkgBus = "package bus"
 	if _, err := os.Stat(tarFilePath); err != nil {
 		content = g.contentBus(nil, isQuery)
@@ -135,14 +130,14 @@ func (g *Generate) generateBus(outDir, pkgPath, assemblerPath string, isQuery bo
 	log.Printf("%s.%s wrote cqrs %s", pkgPath, g.SrvName, tarFilePath)
 }
 
-func (g *Generate) generateAssembler(outDir, pkgPath, assemblerPath string) {
+func (g *Generate) generateAssembler(outDir, pkgPath string, cqrsPath *internal.Path) {
 	if len(g.CQRSList) == 0 {
 		return
 	}
 	var content []byte
 	g.Reset()
-	assemblerOPath := filepath.Join(outDir, assemblerPath, fmt.Sprintf("%s.go", strings.ToLower(g.SrvName)))
-	_, g.pkgAssembler = filepath.Split(assemblerPath)
+	assemblerOPath := filepath.Join(outDir, cqrsPath.AssemblerPath, fmt.Sprintf("%s.go", strings.ToLower(g.SrvName)))
+	_, g.pkgAssembler = filepath.Split(cqrsPath.AssemblerPath)
 	g.pkgAssembler = fmt.Sprintf("package %s", g.pkgAssembler)
 	isAppend := false
 	if _, err := os.Stat(assemblerOPath); err != nil {
@@ -730,17 +725,4 @@ func (g *Generate) Clear() {
 	g.HeaderBuf.Reset()
 	g.ImportsBuf.Reset()
 	g.FunctionBuf.Reset()
-}
-
-func detectOutputDir(paths []string) (string, error) {
-	if len(paths) == 0 {
-		return "", errors.New("no files to derive output directory from")
-	}
-	dir := filepath.Dir(paths[0])
-	for _, p := range paths[1:] {
-		if dir2 := filepath.Dir(p); dir2 != dir {
-			return "", fmt.Errorf("found conflicting directories %q and %q", dir, dir2)
-		}
-	}
-	return dir, nil
 }

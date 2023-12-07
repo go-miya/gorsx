@@ -2,11 +2,11 @@ package example
 
 import "context"
 
-//go:generate gorsx -service Keyword -impl impl -assemble assembler
+//go:generate gorsx -service Keyword -impl impl
 
 // Keyword
 // @GORS @Path(/api)  @Path(/v1)
-// @CQRS @QueryPath(./app) @CommandPath(./app)
+// @CQRS @QueryPath(./app) @CommandPath(./app) @AssemblerPath(./assembler) @QueryBusPath(./bus/query.go) @CommandBusPath(./bus/command.go)
 type Keyword interface {
 	// BindBookCallback
 	// @GORS @POST @Path(/keyword/bind_book_callback) @JSONBinding @JSONRender
@@ -24,6 +24,17 @@ type Keyword interface {
 	// @GORS @POST @Path(/keyword/create_koc_channel_cache) @JSONBinding @JSONRender
 	// @CQRS @Command
 	CreateKocChannelCache(context.Context, *CreateKocChCacheReq) (*CreateKocChCacheResp, error)
+	// CreateKocChannelCache2
+	// @GORS @POST @Path(/keyword/create_koc_channel_cache) @JSONBinding @JSONRender
+	// @CQRS @Query
+	CreateKocChannelCache2(context.Context, *CreateKocChCacheReq) (*CreateKocChCacheResp, error)
+	// CreateKocChannelCache3
+	// @GORS @POST @Path(/keyword/create_koc_channel_cache) @JSONBinding @JSONRender
+	// @CQRS @Query
+	CreateKocChannelCache3(context.Context, *CreateKocChCacheReq) (*CreateKocChCacheResp, error)
+	// CreateKocChannelCache4
+	// @GORS @POST @Path(/keyword/create_koc_channel_cache) @JSONBinding @JSONRender
+	CreateKocChannelCache4(context.Context, *CreateKocChCacheReq) (*CreateKocChCacheResp, error)
 }
 
 type BindBookCallbackReq struct {
