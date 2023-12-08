@@ -39,13 +39,6 @@ func generateFile(_ *protogen.Plugin, file *protogen.File) {
 	if len(file.Services) == 0 {
 		return
 	}
-	generateFileContent(file)
-}
-
-func generateFileContent(file *protogen.File) {
-	if len(file.Services) == 0 {
-		return
-	}
 	for _, service := range file.Services {
 		getFileInfo(file, service)
 	}
@@ -101,14 +94,19 @@ func getFileInfo(file *protogen.File, service *protogen.Service) {
 			)
 		}
 	}
-
-	g.Generate(outDir, filepath.Join(path.GoBasePath, string(file.GoPackageName)), path.ServiceImplPath, path)
+	g.Generate(outDir, buildGoImportPath(path.GoBasePath, strings.Trim(string(file.GoImportPath), "\"")), path.ServiceImplPath, path)
 	for _, f := range cqrsFiles {
 		if err := f.Gen(); err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "%s.%s error: %s \n", service.Desc.FullName(), f.Endpoint, err)
 			continue
 		}
 	}
+}
+
+func buildGoImportPath(basePath string, fileGoImportPath string) string {
+	goImportPathList := strings.Split(fileGoImportPath, "/")
+	goImportPathList = append([]string{basePath}, goImportPathList[1:]...)
+	return strings.Join(goImportPathList, "/")
 }
 
 func splitComment(leadingComment string) []string {
