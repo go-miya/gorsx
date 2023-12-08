@@ -475,7 +475,7 @@ func (g *Generate) contentBus(existFile *ast.File, isQuery bool) []byte {
 		}
 	}
 
-	for _, file := range g.CQRSList {
+	for _, file := range cqrsList {
 		if _, ok := existName[file.Endpoint]; ok {
 			continue
 		}

@@ -11,6 +11,7 @@ import (
 type annotation string
 
 const (
+	GORS           annotation = "@GORS"
 	CQRS           annotation = "@CQRS"
 	Query          annotation = "@Query"
 	Command        annotation = "@Command"
@@ -20,6 +21,8 @@ const (
 	CommandBusPath annotation = "@CommandBusPath"
 	NamePrefix     annotation = "@NamePrefix"
 	AssemblerPath  annotation = "@AssemblerPath"
+	ServicePath    annotation = "@ServicePath"
+	GOBasePath     annotation = "@GoBasePath"
 )
 
 func (a annotation) String() string {
@@ -35,12 +38,14 @@ func (a annotation) PrefixOf(str string) bool {
 }
 
 type Path struct {
-	Query         string
-	Command       string
-	NamePrefix    string
-	BusQuery      string
-	BusCommand    string
-	AssemblerPath string
+	ServiceImplPath string
+	GoBasePath      string
+	Query           string
+	Command         string
+	NamePrefix      string
+	BusQuery        string
+	BusCommand      string
+	AssemblerPath   string
 }
 
 func NewPath(comments []string) *Path {
@@ -89,6 +94,24 @@ func NewPath(comments []string) *Path {
 						log.Fatalf("error: %s AssemblerPath invalid", s)
 					}
 					info.AssemblerPath = v
+				}
+			}
+		} else if GORS.EqualsIgnoreCase(seg[0]) {
+			for _, s := range seg {
+				s = strings.TrimSpace(s)
+				switch {
+				case ServicePath.PrefixOf(s):
+					v, ok := ExtractValue(s, string(ServicePath))
+					if !ok {
+						log.Fatalf("error: %s query path invalid", s)
+					}
+					info.ServiceImplPath = v
+				case GOBasePath.PrefixOf(s):
+					v, ok := ExtractValue(s, string(GOBasePath))
+					if !ok {
+						log.Fatalf("error: %s query path invalid", s)
+					}
+					info.GoBasePath = v
 				}
 			}
 		}

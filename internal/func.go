@@ -68,7 +68,7 @@ func NewMethodInfo(methodName string, t *ast.FuncType) *FuncInfo {
 }
 
 func NewRPCMethodInfo(methodName string) *FuncInfo {
-	return &FuncInfo{}
+	return &FuncInfo{FuncName: methodName}
 }
 
 type FuncInfo struct {
