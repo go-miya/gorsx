@@ -52,6 +52,9 @@ func generateFile(_ *protogen.Plugin, file *protogen.File) {
 // abs_command_path: /Users/zhaoxing/Documents/work/miya/gorsx/example_rpc/app
 func getFileInfo(file *protogen.File, service *protogen.Service) {
 	path := internal.NewPath(splitComment(service.Comments.Leading.String()))
+	if path.ServiceImplPath == "" {
+		return
+	}
 	cwd, _ := os.Getwd()
 	outDir := filepath.Dir(filepath.Join(cwd, file.Desc.Path()))
 	queryAbs := filepath.Join(outDir, path.Query)
@@ -94,7 +97,7 @@ func getFileInfo(file *protogen.File, service *protogen.Service) {
 			)
 		}
 	}
-	g.Generate(outDir, buildGoImportPath(path.GoBasePath, strings.Trim(string(file.GoImportPath), "\"")), path.ServiceImplPath, path)
+	g.GenerateProto(outDir, buildGoImportPath(path.GoBasePath, strings.Trim(string(file.GoImportPath), "\"")), path.ServiceImplPath, path)
 	for _, f := range cqrsFiles {
 		if err := f.Gen(); err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "%s.%s error: %s \n", service.Desc.FullName(), f.Endpoint, err)

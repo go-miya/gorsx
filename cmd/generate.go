@@ -35,6 +35,7 @@ type Generate struct {
 	implRemainDecls  []ast.Decl
 	Imports          map[string]*internal.GoImport
 	SrvName          string
+	SrvTypeShort     string
 	UsedPackageNames map[string]bool
 	Funcs            []*internal.FuncInfo
 	CQRSList         CQRSList
@@ -61,6 +62,12 @@ func (g *Generate) Generate(outDir, pkgPath, ImplPath string, carsPath *internal
 	g.generateBus(outDir, pkgPath, carsPath, false)
 }
 
+// 暂时还未解决bus的增量补充问题，待解决
+func (g *Generate) GenerateProto(outDir, pkgPath, ImplPath string, carsPath *internal.Path) {
+	g.generateServiceImpl(outDir, pkgPath, ImplPath)
+	g.generateAssembler(outDir, pkgPath, carsPath)
+}
+
 func (g *Generate) generateServiceImpl(outDir, pkgPath, ImplPath string) {
 	// gen service impl
 	implOutputPath := filepath.Join(outDir, ImplPath, fmt.Sprintf("%s.go", strings.ToLower(g.SrvName)))
@@ -74,7 +81,7 @@ func (g *Generate) generateServiceImpl(outDir, pkgPath, ImplPath string) {
 	} else {
 		astFile, err := internal.ParserGoFile(implOutputPath)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("generateServiceImpl.ParserGoFile failed, %v", err)
 		}
 		g.implDeclImports, g.implRemainDecls, g.implDeclFuncs = internal.InspectAstFile(astFile)
 		content = g.contentImplAppend()
@@ -97,6 +104,9 @@ func (g *Generate) generateBus(outDir, pkgPath string, cqrsPath *internal.Path, 
 	if isQuery && len(g.CQRSList.GetQueries()) == 0 {
 		return
 	}
+	if !isQuery && len(g.CQRSList.GetCommands()) == 0 {
+		return
+	}
 	var content []byte
 	g.Reset()
 	path := cqrsPath.BusQuery
@@ -104,13 +114,13 @@ func (g *Generate) generateBus(outDir, pkgPath string, cqrsPath *internal.Path, 
 		path = cqrsPath.BusCommand
 	}
 	tarFilePath := filepath.Join(outDir, path)
-	g.pkgBus = "package bus"
+	g.pkgBus = fmt.Sprintf("package %s", filepath.Base(filepath.Dir(tarFilePath)))
 	if _, err := os.Stat(tarFilePath); err != nil {
 		content = g.contentBus(nil, isQuery)
 	} else {
 		busQueryFile, err := internal.ParserGoFile(tarFilePath)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("generateBus.ParserGoFile failed, %v", err)
 		}
 		content = g.contentBus(busQueryFile, isQuery)
 	}
@@ -146,7 +156,7 @@ func (g *Generate) generateAssembler(outDir, pkgPath string, cqrsPath *internal.
 		isAppend = true
 		astFile, err := internal.ParserGoFile(assemblerOPath)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("generateAssembler.ParserGoFile failed, %v", err)
 		}
 		g.implDeclImports, g.implRemainDecls, g.implDeclFuncs = internal.InspectAstFile(astFile)
 		content = g.contentAssembler(isAppend)
@@ -530,7 +540,7 @@ func (g *Generate) printHeaderImpl() {
 }
 
 func (g *Generate) printFunctionImpl() {
-	typeName := g.SrvName + "Controller"
+	typeName := buildTypeName(g.SrvName)
 	g.P(g.FunctionBuf, "type ", typeName, " struct", `{
 	queries    *bus.Queries
 	commands   *bus.Commands
@@ -545,6 +555,10 @@ func (g *Generate) printFunctionImpl() {
 	}
 }
 
+func buildTypeName(name string) string {
+	return name // + "Controller"
+}
+
 func (g *Generate) printRouterInfoImpl(typeName string, info *internal.FuncInfo) {
 	if info.Param2 == nil {
 		return
@@ -553,7 +567,11 @@ func (g *Generate) printRouterInfoImpl(typeName string, info *internal.FuncInfo)
 		return
 	}
 
-	builds := []any{"func(provider *", typeName, ") ", info.FuncName, "(ctx ", contextPackage.Ident("Context"), ","}
+	typeShort := "provider"
+	if g.SrvTypeShort != "" {
+		typeShort = g.SrvTypeShort
+	}
+	builds := []any{fmt.Sprintf("func(%s *", typeShort), typeName, ") ", info.FuncName, "(ctx ", contextPackage.Ident("Context"), ","}
 
 	if info.Param2.Bytes {
 		builds = append(builds, "req []byte")
@@ -620,7 +638,7 @@ func (g *Generate) appendImports() {
 }
 
 func (g *Generate) appendFuncs() {
-	typeName := g.SrvName + "Controller"
+	typeName := buildTypeName(g.SrvName)
 	for _, info := range g.Funcs {
 		if g.isExistFunc(info.FuncName) {
 			continue

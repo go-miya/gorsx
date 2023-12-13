@@ -74,6 +74,7 @@ func main() {
 		FunctionBuf:      &bytes.Buffer{},
 		Imports:          imports,
 		SrvName:          *serviceName,
+		SrvTypeShort:     "ctrl",
 		Funcs:            nil,
 		UsedPackageNames: make(map[string]bool),
 	}
@@ -148,7 +149,7 @@ func main() {
 		}
 	}
 	// gen service implementation
-	g.Generate(outDir, pack.PkgPath, *ImplPath, cqrsPath)
+	g.GenerateProto(outDir, pack.PkgPath, *ImplPath, cqrsPath)
 	// gen cqrs
 	for _, f := range files {
 		if err := f.Gen(); err != nil {
